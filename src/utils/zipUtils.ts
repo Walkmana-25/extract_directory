@@ -1,4 +1,4 @@
-import JSZip from 'jszip';
+import { ZipReader, BlobReader } from '@zip.js/zip.js';
 
 export interface ProcessingOptions {
   delimiter: string;
@@ -17,14 +17,15 @@ export const processZipFiles = async (
   zipFile: File,
   options: ProcessingOptions
 ): Promise<FileItem[]> => {
-  const zip = await JSZip.loadAsync(zipFile);
+  const zipReader = new ZipReader(new BlobReader(zipFile));
+  const entries = await zipReader.getEntries();
   const items: FileItem[] = [];
   const usedNames = new Set<string>();
 
-  // Extract all files (ignore directories which end with /)
-  const entries = Object.entries(zip.files).filter(([_, entry]) => !entry.dir);
+  for (const entry of entries) {
+    if (entry.directory) continue;
 
-  for (const [path] of entries) {
+    const path = entry.filename;
     let isSkipped = false;
     let skipReason = '';
 
@@ -74,24 +75,6 @@ export const processZipFiles = async (
     });
   }
 
+  await zipReader.close();
   return items;
-};
-
-export const generateFlattenedZip = async (
-  originalZipFile: File,
-  processedItems: FileItem[]
-): Promise<Blob> => {
-  const originalZip = await JSZip.loadAsync(originalZipFile);
-  const newZip = new JSZip();
-
-  for (const item of processedItems) {
-    if (item.isSkipped) continue;
-
-    const fileData = await originalZip.file(item.originalPath)?.async('blob');
-    if (fileData) {
-      newZip.file(item.newPath, fileData);
-    }
-  }
-
-  return await newZip.generateAsync({ type: 'blob' });
 };
