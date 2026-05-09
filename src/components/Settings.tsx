@@ -9,10 +9,12 @@ interface SettingsProps {
 const Settings: React.FC<SettingsProps> = ({ options, onChange }) => {
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value, type } = e.target;
-    const checked = (e.target as HTMLInputElement).checked;
+    const isCheckbox = type === 'checkbox' && 'checked' in e.target;
+    const newValue = isCheckbox ? (e.target as HTMLInputElement).checked : (value === '' ? undefined : value);
+
     onChange({
       ...options,
-      [name]: type === 'checkbox' ? checked : (value === '' ? undefined : value),
+      [name]: newValue,
     });
   };
 
