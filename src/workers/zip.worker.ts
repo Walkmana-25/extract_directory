@@ -5,6 +5,7 @@ export interface WorkerMessage {
   file: File;
   processedItems: { originalPath: string; newPath: string; isSkipped: boolean }[];
   writableStream: WritableStream;
+  filenameEncoding?: string;
 }
 
 export interface WorkerProgressMessage {
@@ -27,10 +28,11 @@ self.onmessage = async (event: MessageEvent<WorkerMessage>) => {
   const { type, file, processedItems, writableStream } = event.data;
 
   if (type === 'START') {
+    const { filenameEncoding } = event.data;
     let zipReader: ZipReader<Blob> | undefined;
     let zipWriter: ZipWriter<WritableStream> | undefined;
     try {
-      zipReader = new ZipReader(new BlobReader(file));
+      zipReader = new ZipReader(new BlobReader(file), { filenameEncoding });
       const entries = await zipReader.getEntries();
 
       // Create a map for faster entry lookup

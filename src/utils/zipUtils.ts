@@ -4,6 +4,7 @@ export interface ProcessingOptions {
   delimiter: string;
   includeHidden: boolean;
   includeMacSystem: boolean;
+  filenameEncoding?: string;
 }
 
 export interface FileItem {
@@ -17,7 +18,9 @@ export const processZipFiles = async (
   zipFile: File,
   options: ProcessingOptions
 ): Promise<FileItem[]> => {
-  const zipReader = new ZipReader(new BlobReader(zipFile));
+  const zipReader = new ZipReader(new BlobReader(zipFile), {
+    filenameEncoding: options.filenameEncoding,
+  });
   const entries = await zipReader.getEntries();
   const items: FileItem[] = [];
   const usedNames = new Set<string>();

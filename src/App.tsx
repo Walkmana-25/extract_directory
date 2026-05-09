@@ -18,6 +18,7 @@ function App() {
     delimiter: '-',
     includeHidden: false,
     includeMacSystem: false,
+    filenameEncoding: undefined,
   });
   const [previewItems, setPreviewItems] = useState<FileItem[]>([]);
   const [isProcessing, setIsProcessing] = useState(false);
@@ -111,6 +112,7 @@ function App() {
         file,
         processedItems: previewItems,
         writableStream,
+        filenameEncoding: options.filenameEncoding,
       };
 
       // Transfer the writableStream to the worker
