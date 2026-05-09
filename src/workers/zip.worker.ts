@@ -1,4 +1,6 @@
-import { ZipReader, ZipWriter, BlobReader } from '@zip.js/zip.js';
+import { ZipReader, ZipWriter, BlobReader, configure } from '@zip.js/zip.js';
+
+configure({ useWebWorkers: false });
 
 export interface WorkerMessage {
   type: 'START';

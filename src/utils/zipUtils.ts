@@ -1,4 +1,6 @@
-import { ZipReader, BlobReader } from '@zip.js/zip.js';
+import { ZipReader, BlobReader, configure } from '@zip.js/zip.js';
+
+configure({ useWebWorkers: false });
 
 export interface ProcessingOptions {
   delimiter: string;
