@@ -1,6 +1,6 @@
 import { ZipReader, BlobReader, configure } from '@zip.js/zip.js';
 
-configure({ useWebWorkers: false });
+configure({ useWebWorkers: false, useCompressionStream: false });
 
 export interface ProcessingOptions {
   delimiter: string;

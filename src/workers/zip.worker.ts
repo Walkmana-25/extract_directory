@@ -1,6 +1,6 @@
-import { ZipReader, ZipWriter, BlobReader, configure } from '@zip.js/zip.js';
+import { ZipReader, ZipWriter, BlobReader, BlobWriter, configure } from '@zip.js/zip.js';
 
-configure({ useWebWorkers: false });
+configure({ useWebWorkers: false, useCompressionStream: false });
 
 export interface WorkerMessage {
   type: 'START';
@@ -40,7 +40,11 @@ self.onmessage = async (event: MessageEvent<WorkerMessage>) => {
       // Create a map for faster entry lookup
       const entryMap = new Map(entries.map(e => [e.filename, e]));
 
-      zipWriter = new ZipWriter(writableStream);
+      zipWriter = new ZipWriter(writableStream, {
+        useCompressionStream: false,
+        useWebWorkers: false,
+        bufferedWrite: true,
+      });
 
       const totalCount = processedItems.filter((i) => !i.isSkipped).length;
       let processedCount = 0;
@@ -57,8 +61,10 @@ self.onmessage = async (event: MessageEvent<WorkerMessage>) => {
             totalCount,
           } as WorkerProgressMessage);
 
+          // Use DataDescriptor: false to avoid using some stream features that might trigger pipeThrough
           // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          await zipWriter.add(item.newPath, entry as any);
+          const blob = await (entry as any).getData(new BlobWriter());
+          await zipWriter.add(item.newPath, new BlobReader(blob));
           processedCount++;
         }
       }
