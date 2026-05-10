@@ -18,6 +18,8 @@ function App() {
     delimiter: '-',
     includeHidden: false,
     includeMacSystem: false,
+    filenameEncoding: undefined,
+    outputFileName: 'flattened.zip',
   });
   const [previewItems, setPreviewItems] = useState<FileItem[]>([]);
   const [isProcessing, setIsProcessing] = useState(false);
@@ -39,6 +41,16 @@ function App() {
         }
         return;
       }
+
+      // Update default output filename if it hasn't been set yet or if it matches the previous default
+      setOptions(prev => {
+        const baseName = file.name.substring(0, file.name.lastIndexOf('.')) || file.name;
+        const newDefault = `${baseName}-flattened.zip`;
+        if (prev.outputFileName === 'flattened.zip' || prev.outputFileName === '') {
+          return { ...prev, outputFileName: newDefault };
+        }
+        return prev;
+      });
 
       try {
         const items = await processZipFiles(file, options);
@@ -66,16 +78,41 @@ function App() {
     if (!file || previewItems.length === 0) return;
 
     try {
-      // @ts-expect-error - File System Access API might not be in the types yet
-      const handle = await window.showSaveFilePicker({
-        suggestedName: 'flattened.zip',
-        types: [{
-          description: 'ZIP archive',
-          accept: { 'application/zip': ['.zip'] },
-        }],
-      });
+      let writableStream: WritableStream;
+      let fallbackBlobPromise: Promise<Blob> | null = null;
 
-      const writableStream = await handle.createWritable();
+      // @ts-expect-error - File System Access API might not be in the types yet
+      if (typeof window.showSaveFilePicker === 'function') {
+        try {
+          // @ts-expect-error - File System Access API might not be in the types yet
+          const handle = await window.showSaveFilePicker({
+            suggestedName: options.outputFileName || 'flattened.zip',
+            types: [{
+              description: 'ZIP archive',
+              accept: { 'application/zip': ['.zip'] },
+            }],
+          });
+          writableStream = await handle.createWritable();
+        } catch (error) {
+          if (error instanceof Error && error.name === 'AbortError') return;
+          throw error;
+        }
+      } else {
+        // Fallback for browsers without File System Access API
+        const { readable, writable } = new TransformStream();
+        writableStream = writable;
+        fallbackBlobPromise = (async () => {
+          const reader = readable.getReader();
+          const chunks: Uint8Array[] = [];
+          while (true) {
+            const { done, value } = await reader.read();
+            if (done) break;
+            chunks.push(value);
+          }
+          return new Blob(chunks as unknown as BlobPart[], { type: 'application/zip' });
+        })();
+      }
+
       setIsProcessing(true);
       setProgress({ currentFile: '準備中...', processedCount: 0, totalCount: previewItems.filter(i => !i.isSkipped).length });
 
@@ -92,11 +129,31 @@ function App() {
             totalCount: data.totalCount,
           });
         } else if (data.type === 'DONE') {
-          setIsProcessing(false);
-          setProgress(null);
-          worker.terminate();
-          workerRef.current = null;
-          alert('ZIPファイルの生成が完了しました。');
+          const finish = () => {
+            setIsProcessing(false);
+            setProgress(null);
+            worker.terminate();
+            workerRef.current = null;
+            alert('ZIPファイルの生成が完了しました。');
+          };
+
+          if (fallbackBlobPromise) {
+            fallbackBlobPromise.then((blob) => {
+              const url = URL.createObjectURL(blob);
+              const a = document.createElement('a');
+              a.href = url;
+              a.download = options.outputFileName || 'flattened.zip';
+              a.click();
+              setTimeout(() => URL.revokeObjectURL(url), 100);
+              finish();
+            }).catch((err) => {
+              console.error('Failed to create fallback blob:', err);
+              alert('ファイルの保存に失敗しました。');
+              finish();
+            });
+          } else {
+            finish();
+          }
         } else if (data.type === 'ERROR') {
           setIsProcessing(false);
           setProgress(null);
@@ -111,6 +168,7 @@ function App() {
         file,
         processedItems: previewItems,
         writableStream,
+        filenameEncoding: options.filenameEncoding,
       };
 
       // Transfer the writableStream to the worker

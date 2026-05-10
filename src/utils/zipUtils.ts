@@ -1,9 +1,13 @@
-import { ZipReader, BlobReader } from '@zip.js/zip.js';
+import { ZipReader, BlobReader, configure } from '@zip.js/zip.js';
+
+configure({ useWebWorkers: false, useCompressionStream: false });
 
 export interface ProcessingOptions {
   delimiter: string;
   includeHidden: boolean;
   includeMacSystem: boolean;
+  filenameEncoding?: string;
+  outputFileName: string;
 }
 
 export interface FileItem {
@@ -17,7 +21,9 @@ export const processZipFiles = async (
   zipFile: File,
   options: ProcessingOptions
 ): Promise<FileItem[]> => {
-  const zipReader = new ZipReader(new BlobReader(zipFile));
+  const zipReader = new ZipReader(new BlobReader(zipFile), {
+    filenameEncoding: options.filenameEncoding,
+  });
   const entries = await zipReader.getEntries();
   const items: FileItem[] = [];
   const usedNames = new Set<string>();

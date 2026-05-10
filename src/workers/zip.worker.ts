@@ -1,10 +1,13 @@
-import { ZipReader, ZipWriter, BlobReader } from '@zip.js/zip.js';
+import { ZipReader, ZipWriter, BlobReader, BlobWriter, configure } from '@zip.js/zip.js';
+
+configure({ useWebWorkers: false, useCompressionStream: false });
 
 export interface WorkerMessage {
   type: 'START';
   file: File;
   processedItems: { originalPath: string; newPath: string; isSkipped: boolean }[];
   writableStream: WritableStream;
+  filenameEncoding?: string;
 }
 
 export interface WorkerProgressMessage {
@@ -27,16 +30,21 @@ self.onmessage = async (event: MessageEvent<WorkerMessage>) => {
   const { type, file, processedItems, writableStream } = event.data;
 
   if (type === 'START') {
+    const { filenameEncoding } = event.data;
     let zipReader: ZipReader<Blob> | undefined;
     let zipWriter: ZipWriter<WritableStream> | undefined;
     try {
-      zipReader = new ZipReader(new BlobReader(file));
+      zipReader = new ZipReader(new BlobReader(file), { filenameEncoding });
       const entries = await zipReader.getEntries();
 
       // Create a map for faster entry lookup
       const entryMap = new Map(entries.map(e => [e.filename, e]));
 
-      zipWriter = new ZipWriter(writableStream);
+      zipWriter = new ZipWriter(writableStream, {
+        useCompressionStream: false,
+        useWebWorkers: false,
+        bufferedWrite: true,
+      });
 
       const totalCount = processedItems.filter((i) => !i.isSkipped).length;
       let processedCount = 0;
@@ -53,8 +61,10 @@ self.onmessage = async (event: MessageEvent<WorkerMessage>) => {
             totalCount,
           } as WorkerProgressMessage);
 
+          // Use DataDescriptor: false to avoid using some stream features that might trigger pipeThrough
           // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          await zipWriter.add(item.newPath, entry as any);
+          const blob = await (entry as any).getData(new BlobWriter());
+          await zipWriter.add(item.newPath, new BlobReader(blob));
           processedCount++;
         }
       }
