@@ -75,6 +75,20 @@ const Settings: React.FC<SettingsProps> = ({ options, onChange }) => {
             <option value="shift-jis">Shift-JIS (日本語 Windows)</option>
           </select>
         </div>
+        <div>
+          <label htmlFor="outputFileName" className="block text-sm font-medium text-gray-700 mb-1">
+            出力ファイル名
+          </label>
+          <input
+            type="text"
+            id="outputFileName"
+            name="outputFileName"
+            value={options.outputFileName}
+            onChange={handleChange}
+            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+            placeholder="例: result.zip"
+          />
+        </div>
       </div>
     </div>
   );

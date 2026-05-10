@@ -7,6 +7,7 @@ export interface ProcessingOptions {
   includeHidden: boolean;
   includeMacSystem: boolean;
   filenameEncoding?: string;
+  outputFileName: string;
 }
 
 export interface FileItem {

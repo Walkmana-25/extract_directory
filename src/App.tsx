@@ -19,6 +19,7 @@ function App() {
     includeHidden: false,
     includeMacSystem: false,
     filenameEncoding: undefined,
+    outputFileName: 'flattened.zip',
   });
   const [previewItems, setPreviewItems] = useState<FileItem[]>([]);
   const [isProcessing, setIsProcessing] = useState(false);
@@ -40,6 +41,16 @@ function App() {
         }
         return;
       }
+
+      // Update default output filename if it hasn't been set yet or if it matches the previous default
+      setOptions(prev => {
+        const baseName = file.name.substring(0, file.name.lastIndexOf('.')) || file.name;
+        const newDefault = `${baseName}-flattened.zip`;
+        if (prev.outputFileName === 'flattened.zip' || prev.outputFileName === '') {
+          return { ...prev, outputFileName: newDefault };
+        }
+        return prev;
+      });
 
       try {
         const items = await processZipFiles(file, options);
@@ -75,7 +86,7 @@ function App() {
         try {
           // @ts-expect-error - File System Access API might not be in the types yet
           const handle = await window.showSaveFilePicker({
-            suggestedName: 'flattened.zip',
+            suggestedName: options.outputFileName || 'flattened.zip',
             types: [{
               description: 'ZIP archive',
               accept: { 'application/zip': ['.zip'] },
@@ -131,7 +142,7 @@ function App() {
               const url = URL.createObjectURL(blob);
               const a = document.createElement('a');
               a.href = url;
-              a.download = 'flattened.zip';
+              a.download = options.outputFileName || 'flattened.zip';
               a.click();
               setTimeout(() => URL.revokeObjectURL(url), 100);
               finish();
