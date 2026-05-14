@@ -31,7 +31,9 @@ export const processZipFiles = async (
   for (const entry of entries) {
     if (entry.directory) continue;
 
-    const path = entry.filename;
+    // Normalize filename to NFC (macOS uses NFD, which causes mojibake)
+    const rawPath = entry.filename;
+    const path = rawPath.normalize('NFC');
     let isSkipped = false;
     let skipReason = '';
 
@@ -74,7 +76,7 @@ export const processZipFiles = async (
     }
 
     items.push({
-      originalPath: path,
+      originalPath: rawPath, // Use original raw path to find the entry in the worker
       newPath,
       isSkipped,
       skipReason,
