@@ -44,7 +44,8 @@ function App() {
 
       // Update default output filename if it hasn't been set yet or if it matches the previous default
       setOptions(prev => {
-        const baseName = file.name.substring(0, file.name.lastIndexOf('.')) || file.name;
+        const normalizedName = file.name.normalize('NFC');
+        const baseName = normalizedName.substring(0, normalizedName.lastIndexOf('.')) || normalizedName;
         const newDefault = `${baseName}-flattened.zip`;
         if (prev.outputFileName === 'flattened.zip' || prev.outputFileName === '') {
           return { ...prev, outputFileName: newDefault };

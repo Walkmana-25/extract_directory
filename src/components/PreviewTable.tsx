@@ -22,8 +22,8 @@ const PreviewTable: React.FC<PreviewTableProps> = ({ items }) => {
           <tbody className="divide-y divide-gray-200">
             {items.map((item, index) => (
               <tr key={index} className={item.isSkipped ? 'bg-gray-50 text-gray-400' : 'text-gray-700 hover:bg-gray-50'}>
-                <td className="px-6 py-4 truncate" title={item.originalPath}>
-                  {item.originalPath}
+                <td className="px-6 py-4 truncate" title={item.originalPath.normalize('NFC')}>
+                  {item.originalPath.normalize('NFC')}
                 </td>
                 <td className="px-6 py-4 truncate" title={item.newPath}>
                   {item.isSkipped ? '-' : item.newPath}
